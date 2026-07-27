@@ -11,7 +11,7 @@ class VersionManager_PersonalizationColors
     static _ := VersionManager_PersonalizationColors._init()
     _init()    {
         global
-        PERSONALIZATIONCOLORS_VERSION := "1.0.0"
+        PERSONALIZATIONCOLORS_VERSION := "1.0.1"
     }
 }
 class PersonalizationColors
@@ -38,13 +38,21 @@ class PersonalizationColors
     }
     ShowAccentColorOnTitleBarsAndWindowsBorders    { ;  Show accent color on title bars and windows borders    제목 표시줄 및 창 테두리에 테마 컬러 표시
         get  {
-            regRead regValue, HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\DWM, ColorPrevalence
-            return (ErrorLevel?false:regValue)
+            try  {
+                regRead regValue, HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\DWM, ColorPrevalence
+            }  catch  {
+                return false
+            }
+            return regValue
         }
     }
     _regReadThemes(valueName)    {
         static keyName:="HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-        regRead regValue, % keyName, % valueName
-        return (ErrorLevel?false:regValue)
+        try  {
+            regRead regValue, % keyName, % valueName
+        }  catch  {
+            return false
+        }
+        return regValue
     }
 }
