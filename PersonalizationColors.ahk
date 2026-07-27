@@ -11,7 +11,7 @@ class VersionManager_PersonalizationColors
     static _ := this._init()
     static _init()    {
         global
-        PERSONALIZATIONCOLORS_VERSION := "1.0.0"
+        PERSONALIZATIONCOLORS_VERSION := "1.0.1"
     }
 }
 class PersonalizationColors
