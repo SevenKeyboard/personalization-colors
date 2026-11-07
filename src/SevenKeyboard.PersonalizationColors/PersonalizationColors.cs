@@ -6,10 +6,7 @@
 // License: The Unlicense
 //==============================================================
 
-using System;
-using System.IO;
-using System.Security;
-using Microsoft.Win32;
+using System.Runtime.InteropServices;
 
 namespace SevenKeyboard
 {
@@ -23,8 +20,13 @@ namespace SevenKeyboard
     {
         private const string PersonalizeKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize";
         private const string DwmKey = @"SOFTWARE\Microsoft\Windows\DWM";
+        private static readonly nint CurrentUser = unchecked((nint)(int)0x80000001);
+        private const uint DwordOnly = 0x00000010; // RRF_RT_REG_DWORD (excludes REG_BINARY).
+        private const int ErrorFileNotFound = 2;
+        private const int ErrorPathNotFound = 3;
 
         // Each query is independent. Use the out value only when the method returns true.
+        // Missing keys/values succeed with the original defaults: Dark modes and false flags.
         public static bool TryGetDefaultWindowsMode(out ThemeMode mode) =>
             TryGetThemeMode("SystemUsesLightTheme", out mode);
 
@@ -53,20 +55,21 @@ namespace SevenKeyboard
         internal static bool TryReadFlag(string keyPath, string valueName, out bool enabled)
         {
             enabled = false;
-            try
-            {
-                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(keyPath, writable: false);
-                // GetValue returns Int32 only for REG_DWORD; do not coerce other registry types.
-                if (key?.GetValue(valueName) is not int value)
-                    return false;
-
-                enabled = value != 0;
+            uint size = sizeof(int);
+            // GetValue can hide native read errors behind its default value; keep their status here.
+            int result = RegGetValueW(CurrentUser, keyPath, valueName, DwordOnly,
+                out uint type, out int value, ref size);
+            if (result is ErrorFileNotFound or ErrorPathNotFound)
                 return true;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SecurityException)
-            {
+            if (result != 0 || type != 4 || size != sizeof(int))
                 return false;
-            }
+
+            enabled = value != 0;
+            return true;
         }
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        private static extern int RegGetValueW(nint key, string subKey, string valueName,
+            uint flags, out uint type, out int data, ref uint dataSize);
     }
 }
